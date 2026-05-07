@@ -2,6 +2,10 @@ import sys
 import os
 import json
 import base64
+import threading
+import urllib.request
+
+VERSION = "1.0.0"
 
 # ── 다국어 ───────────────────────────────────────────────────────────
 CONFIG_PATH = os.path.expanduser("~/.desktop_pet_config.json")
@@ -40,6 +44,7 @@ STRINGS = {
         "text_add_placeholder": "텍스트 입력...",
         "text_add_btn": "추가",
         "greeting": "안녕하세요!",
+        "update_available": "새 버전이 있어요! 클릭해서 다운로드",
         "hide_pet": "펫 가리기",
         "show_pet": "펫 표시",
     },
@@ -75,7 +80,8 @@ STRINGS = {
         "pet_size": "Pet size",
         "text_add_placeholder": "Enter text...",
         "text_add_btn": "Add",
-        "greeting": "Hello! 👋",
+        "greeting": "Hello!",
+        "update_available": "New version available! Click to download",
         "hide_pet": "Hide pet",
         "show_pet": "Show pet",
     },
@@ -113,7 +119,7 @@ from PyQt6.QtWidgets import (
     QPushButton, QMenu, QSystemTrayIcon, QMessageBox, QScrollArea, QComboBox, QLineEdit
 )
 from PyQt6.QtGui import QIcon, QPalette
-from PyQt6.QtCore import Qt, QPoint, QTimer, QPropertyAnimation, QEasingCurve, QUrl, QMimeData
+from PyQt6.QtCore import Qt, QPoint, QTimer, QPropertyAnimation, QEasingCurve, QUrl, QMimeData, pyqtSignal
 from PyQt6.QtGui import QPixmap, QAction, QColor, QPainter, QPainterPath, QImage, QDrag
 
 
@@ -212,30 +218,68 @@ class ToastBubble(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(14, 10, 14, 22)
+        self._on_click = None
+        self._tail_top = False
+        self._layout = QVBoxLayout(self)
+        self._layout.setContentsMargins(14, 10, 14, 22)
         self._label = QLabel()
         self._label.setStyleSheet("font-size: 12px; color: #333;")
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self._label)
+        self._layout.addWidget(self._label)
 
-    def set_message(self, msg):
+    def set_tail_top(self, val: bool):
+        if self._tail_top == val:
+            return
+        self._tail_top = val
+        t = 22 if val else 10
+        b = 10 if val else 22
+        self._layout.setContentsMargins(14, t, 14, b)
+        self.update()
+
+    def set_message(self, msg, on_click=None):
         self._label.setText(msg)
+        self._on_click = on_click
+        self.setCursor(Qt.CursorShape.PointingHandCursor if on_click else Qt.CursorShape.ArrowCursor)
         self.ensurePolished()
         self.adjustSize()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton and self._on_click:
+            self._on_click()
+        super().mousePressEvent(event)
 
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         w, h = self.width(), self.height()
         tail, r = 12, 12
+        cx = w / 2
 
         path = QPainterPath()
-        path.addRoundedRect(0, 0, w, h - tail, r, r)
-        cx = w / 2
-        path.moveTo(cx - 10, h - tail)
-        path.lineTo(cx, h)
-        path.lineTo(cx + 10, h - tail)
+        if self._tail_top:
+            path.moveTo(cx, 0)
+            path.lineTo(cx + 10, tail)
+            path.lineTo(w - r, tail)
+            path.arcTo(w - r * 2, tail, r * 2, r * 2, 90, -90)
+            path.lineTo(w, h - r)
+            path.arcTo(w - r * 2, h - r * 2, r * 2, r * 2, 0, -90)
+            path.lineTo(r, h)
+            path.arcTo(0, h - r * 2, r * 2, r * 2, 270, -90)
+            path.lineTo(0, tail + r)
+            path.arcTo(0, tail, r * 2, r * 2, 180, -90)
+            path.lineTo(cx - 10, tail)
+        else:
+            path.moveTo(cx, h)
+            path.lineTo(cx - 10, h - tail)
+            path.lineTo(r, h - tail)
+            path.arcTo(0, h - tail - r * 2, r * 2, r * 2, 270, -90)
+            path.lineTo(0, r)
+            path.arcTo(0, 0, r * 2, r * 2, 180, -90)
+            path.lineTo(w - r, 0)
+            path.arcTo(w - r * 2, 0, r * 2, r * 2, 90, -90)
+            path.lineTo(w, h - tail - r)
+            path.arcTo(w - r * 2, h - tail - r * 2, r * 2, r * 2, 0, -90)
+            path.lineTo(cx + 10, h - tail)
         path.closeSubpath()
 
         painter.setBrush(QColor(245, 245, 245))
@@ -524,6 +568,7 @@ class BubbleWidget(QWidget):
 
 class DesktopPet(QWidget):
     BUBBLE_W = 240
+    _update_signal = pyqtSignal(str)
 
     def __init__(self):
         super().__init__()
@@ -601,7 +646,9 @@ class DesktopPet(QWidget):
             (screen.height() - self.height()) // 2
         )
         self.show()
+        self._update_signal.connect(self._on_update_available)
         QTimer.singleShot(500, self._show_greeting)
+        QTimer.singleShot(3000, self._check_update)
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -759,7 +806,30 @@ class DesktopPet(QWidget):
         self._toast_timer.stop()
         self._toast_timer.start(2000)
 
-    def _show_toast(self, msg=None):
+    def _check_update(self):
+        def _fetch():
+            try:
+                url = "https://api.github.com/repos/s012am/deskpet/releases/latest"
+                req = urllib.request.Request(url, headers={"User-Agent": "DeskPet"})
+                with urllib.request.urlopen(req, timeout=5) as r:
+                    data = json.loads(r.read())
+                latest = data["tag_name"].lstrip("v")
+                if latest != VERSION:
+                    self._update_signal.emit(latest)
+            except Exception:
+                pass
+        threading.Thread(target=_fetch, daemon=True).start()
+
+    def _on_update_available(self, version):
+        import webbrowser
+        def open_releases():
+            webbrowser.open("https://github.com/s012am/deskpet/releases/latest")
+            self._hide_toast()
+        self._show_toast(tr("update_available"), on_click=open_releases)
+        self._toast_timer.stop()
+        self._toast_timer.start(5000)
+
+    def _show_toast(self, msg=None, on_click=None):
         if msg is None:
             msg = tr("copied")
         # 버블/토스트가 열려있으면 먼저 정리
@@ -769,17 +839,23 @@ class DesktopPet(QWidget):
             self._toast_timer.stop()
             self._hide_toast()
 
-        self._toast.set_message(msg)
+        bubble_below = _config.get("bubble_pos", "above") == "below"
+        self._toast.set_tail_top(bubble_below)
+        self._toast.set_message(msg, on_click=on_click)
         tw = self._toast.width()
         th = self._toast.height()
         total_w = max(self._pet_w, tw)
 
-        # pet_label이 항상 (0,0)에 있는 상태에서 호출됨
         pet_screen = self._rest_pos()
         self.resize(total_w, th + self._pet_h)
-        self._toast.move((total_w - tw) // 2, 0)
-        self._pet_label.move((total_w - self._pet_w) // 2, th)
-        self.move(pet_screen.x() - (total_w - self._pet_w) // 2, pet_screen.y() - th)
+        if bubble_below:
+            self._pet_label.move((total_w - self._pet_w) // 2, 0)
+            self._toast.move((total_w - tw) // 2, self._pet_h)
+            self.move(pet_screen.x() - (total_w - self._pet_w) // 2, pet_screen.y())
+        else:
+            self._toast.move((total_w - tw) // 2, 0)
+            self._pet_label.move((total_w - self._pet_w) // 2, th)
+            self.move(pet_screen.x() - (total_w - self._pet_w) // 2, pet_screen.y() - th)
 
         self._toast.show()
         self._toast.raise_()
