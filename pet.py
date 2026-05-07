@@ -39,6 +39,7 @@ STRINGS = {
         "pet_size": "펫 크기",
         "text_add_placeholder": "텍스트 입력...",
         "text_add_btn": "추가",
+        "greeting": "안녕하세요!",
         "hide_pet": "펫 가리기",
         "show_pet": "펫 표시",
     },
@@ -74,6 +75,7 @@ STRINGS = {
         "pet_size": "Pet size",
         "text_add_placeholder": "Enter text...",
         "text_add_btn": "Add",
+        "greeting": "Hello! 👋",
         "hide_pet": "Hide pet",
         "show_pet": "Show pet",
     },
@@ -598,6 +600,7 @@ class DesktopPet(QWidget):
             (screen.height() - self.height()) // 2
         )
         self.show()
+        QTimer.singleShot(300, lambda: self._show_toast(tr("greeting")))
 
     def paintEvent(self, event):
         painter = QPainter(self)
