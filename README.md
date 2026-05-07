@@ -10,7 +10,7 @@
 
   ## 설치
 
-  1. [Releases](링크) 에서 DeskPet.dmg 다운로드
+  1. [Releases](https://github.com/s012am/deskpet/releases) 에서 DeskPet.dmg 다운로드
   2. DMG 열고 DeskPet.app을 Applications 폴더로 드래그
   3. 처음 실행 시 시스템 설정 → 개인정보 보호 및 보안 → 보안 아래에 "그래도 열기" 버튼 클릭
      또는 터미널에서 xattr -d com.apple.quarantine /Applications/DeskPet.app 실행
