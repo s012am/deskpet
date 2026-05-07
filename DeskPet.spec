@@ -28,7 +28,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='DesktopPet',
+    name='DeskPet',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -47,13 +47,13 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='DesktopPet',
+    name='DeskPet',
 )
 app = BUNDLE(
     coll,
-    name='DesktopPet.app',
+    name='DeskPet.app',
     icon='cat_icon.icns',
-    bundle_identifier='com.desktoppet.app',
+    bundle_identifier='com.deskpet.app',
     info_plist={
         'NSHighResolutionCapable': True,
         'LSUIElement': True,

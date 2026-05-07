@@ -1039,7 +1039,7 @@ class DesktopPet(QWidget):
 
 class SettingsWindow(QWidget):
     """설정 창"""
-    PLIST_PATH = os.path.expanduser("~/Library/LaunchAgents/com.desktoppet.plist")
+    PLIST_PATH = os.path.expanduser("~/Library/LaunchAgents/com.deskpet.plist")
 
     def __init__(self, parent=None, pet=None):
         super().__init__(parent, Qt.WindowType.Window)
@@ -1179,7 +1179,7 @@ class SettingsWindow(QWidget):
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.desktoppet</string>
+    <string>com.deskpet</string>
     <key>ProgramArguments</key>
     <array>
         <string>{python}</string>
@@ -1242,7 +1242,7 @@ class TrayIcon(QSystemTrayIcon):
         super().__init__(QIcon(icon_pixmap))
         self._pet = pet
         self._popup = None
-        self.setToolTip("Desktop Pet")
+        self.setToolTip("DeskPet")
         self._menu = QMenu()
         self._menu.setStyleSheet(_menu_style())
         self._hide_action = QAction(tr("hide_pet"), self._menu)
