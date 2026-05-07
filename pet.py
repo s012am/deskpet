@@ -221,6 +221,7 @@ class ToastBubble(QWidget):
 
     def set_message(self, msg):
         self._label.setText(msg)
+        self.ensurePolished()
         self.adjustSize()
 
     def paintEvent(self, event):
@@ -600,7 +601,7 @@ class DesktopPet(QWidget):
             (screen.height() - self.height()) // 2
         )
         self.show()
-        QTimer.singleShot(300, lambda: self._show_toast(tr("greeting")))
+        QTimer.singleShot(500, self._show_greeting)
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -752,6 +753,11 @@ class DesktopPet(QWidget):
         self._close_bubble()
         self._show_toast()
         self._jump()
+
+    def _show_greeting(self):
+        self._show_toast(tr("greeting"))
+        self._toast_timer.stop()
+        self._toast_timer.start(2000)
 
     def _show_toast(self, msg=None):
         if msg is None:
