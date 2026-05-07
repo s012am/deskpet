@@ -1235,7 +1235,7 @@ class TrayPopup(QWidget):
 
 class TrayIcon(QSystemTrayIcon):
     def __init__(self, pet):
-        icon_pixmap = QPixmap(resource_path("pets/cat/cat_defalt.png")).scaled(
+        icon_pixmap = QPixmap(resource_path("pets/cat/cat_icon.png")).scaled(
             64, 64, Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.SmoothTransformation
         )

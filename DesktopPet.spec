@@ -52,7 +52,7 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name='DesktopPet.app',
-    icon=None,
+    icon='cat_icon.icns',
     bundle_identifier='com.desktoppet.app',
     info_plist={
         'NSHighResolutionCapable': True,
