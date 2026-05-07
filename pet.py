@@ -931,10 +931,16 @@ class DesktopPet(QWidget):
                 self._jump()
 
     # ── 펫 이미지 전환 ──────────────────────────────────────────────
+    _pixmap_cache: dict = {}
+
     def _set_pet_image(self, filename):
-        src = QPixmap(resource_path(filename))
         sz = self._pet_w
-        if not src.isNull():
+        key = (filename, sz)
+        canvas = self._pixmap_cache.get(key)
+        if canvas is None:
+            src = QPixmap(resource_path(filename))
+            if src.isNull():
+                return
             scaled = src.scaled(sz, sz, Qt.AspectRatioMode.KeepAspectRatio,
                                 Qt.TransformationMode.SmoothTransformation)
             canvas = QPixmap(sz, sz)
@@ -943,16 +949,18 @@ class DesktopPet(QWidget):
             painter.drawPixmap((sz - scaled.width()) // 2,
                                (sz - scaled.height()) // 2, scaled)
             painter.end()
-            self._pet_label.clear()
-            self._pet_label.setPixmap(canvas)
-            self.repaint()
-            QTimer.singleShot(0, self._ns_redraw)
+            self._pixmap_cache[key] = canvas
+        self._pet_label.clear()
+        self._pet_label.setPixmap(canvas)
+        self.repaint()
+        QTimer.singleShot(0, self._ns_redraw)
 
     def apply_pet_size(self, scale):
         """설정에서 크기 변경 시 호출"""
         sz = round(70 * scale)
         self._pet_w = sz
         self._pet_h = sz
+        self._pixmap_cache.clear()
         self._pet_label.setFixedSize(sz, sz)
         img = "pets/cat/cat_box.png" if self._locked else \
               "pets/cat/cat_z.png" if self._idle else "pets/cat/cat_defalt.png"
