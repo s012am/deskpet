@@ -1025,20 +1025,23 @@ class DesktopPet(QWidget):
 
     def _set_pet_image(self, filename):
         sz = self._pet_w
-        key = (filename, sz)
+        dpr = self.devicePixelRatio()
+        key = (filename, sz, dpr)
         canvas = self._pixmap_cache.get(key)
         if canvas is None:
             src = QPixmap(resource_path(filename))
             if src.isNull():
                 return
-            scaled = src.scaled(sz, sz, Qt.AspectRatioMode.KeepAspectRatio,
+            px = round(sz * dpr)
+            scaled = src.scaled(px, px, Qt.AspectRatioMode.KeepAspectRatio,
                                 Qt.TransformationMode.SmoothTransformation)
-            canvas = QPixmap(sz, sz)
+            canvas = QPixmap(px, px)
             canvas.fill(Qt.GlobalColor.transparent)
             painter = QPainter(canvas)
-            painter.drawPixmap((sz - scaled.width()) // 2,
-                               (sz - scaled.height()) // 2, scaled)
+            painter.drawPixmap((px - scaled.width()) // 2,
+                               (px - scaled.height()) // 2, scaled)
             painter.end()
+            canvas.setDevicePixelRatio(dpr)
             self._pixmap_cache[key] = canvas
         self._pet_label.clear()
         self._pet_label.setPixmap(canvas)
