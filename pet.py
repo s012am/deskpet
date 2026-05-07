@@ -585,6 +585,9 @@ class DesktopPet(QWidget):
         self._idle_timer.setSingleShot(True)
         self._idle_timer.timeout.connect(self._on_idle)
         self._idle_timer.start(60000)
+        self._zz_frame = 0
+        self._zz_timer = QTimer(self)
+        self._zz_timer.timeout.connect(self._tick_zz)
 
         self._load_history()
         self._apply_layout()
@@ -901,14 +904,26 @@ class DesktopPet(QWidget):
         QApplication.quit()
 
     # ── 유휴 상태 ───────────────────────────────────────────────────
+    _ZZ_FRAMES = ["pets/cat/cat_.png", "pets/cat/cat_z.png", "pets/cat/cat_zz.png"]
+
     def _on_idle(self):
         self._idle = True
-        self._set_pet_image("pets/cat/cat_zz.png")
+        self._zz_frame = 0
+        self._set_pet_image(self._ZZ_FRAMES[0])
+        self._zz_timer.start(1200)
+
+    def _tick_zz(self):
+        if not self._idle:
+            self._zz_timer.stop()
+            return
+        self._zz_frame = (self._zz_frame + 1) % len(self._ZZ_FRAMES)
+        self._set_pet_image(self._ZZ_FRAMES[self._zz_frame])
 
     def _reset_idle(self, jump=True):
         self._idle_timer.start(60000)
         if self._idle:
             self._idle = False
+            self._zz_timer.stop()
             self._just_woke = True
             img = "pets/cat/cat_box.png" if self._locked else "pets/cat/cat_defalt.png"
             self._set_pet_image(img)
@@ -940,7 +955,7 @@ class DesktopPet(QWidget):
         self._pet_h = sz
         self._pet_label.setFixedSize(sz, sz)
         img = "pets/cat/cat_box.png" if self._locked else \
-              "pets/cat/cat_zz.png" if self._idle else "pets/cat/cat_defalt.png"
+              "pets/cat/cat_z.png" if self._idle else "pets/cat/cat_defalt.png"
         self._set_pet_image(img)
         self._apply_layout()
 
