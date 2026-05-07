@@ -39,6 +39,8 @@ STRINGS = {
         "pet_size": "펫 크기",
         "text_add_placeholder": "텍스트 입력...",
         "text_add_btn": "추가",
+        "hide_pet": "펫 가리기",
+        "show_pet": "펫 표시",
     },
     "en": {
         "tabs": ["Text", "Image", "File"],
@@ -72,6 +74,8 @@ STRINGS = {
         "pet_size": "Pet size",
         "text_add_placeholder": "Enter text...",
         "text_add_btn": "Add",
+        "hide_pet": "Hide pet",
+        "show_pet": "Show pet",
     },
 }
 
@@ -580,7 +584,7 @@ class DesktopPet(QWidget):
         self._idle_timer = QTimer(self)
         self._idle_timer.setSingleShot(True)
         self._idle_timer.timeout.connect(self._on_idle)
-        self._idle_timer.start(10000)
+        self._idle_timer.start(60000)
 
         self._load_history()
         self._apply_layout()
@@ -810,6 +814,9 @@ class DesktopPet(QWidget):
     def contextMenuEvent(self, event):
         menu = QMenu(self)
         menu.setStyleSheet(_menu_style())
+        hide_action = QAction(tr("hide_pet"), self)
+        hide_action.triggered.connect(self.hide)
+        menu.addAction(hide_action)
         lock_action = QAction(tr("unlock") if self._locked else tr("lock"), self)
         lock_action.triggered.connect(self._toggle_lock)
         menu.addAction(lock_action)
@@ -899,7 +906,7 @@ class DesktopPet(QWidget):
         self._set_pet_image("pets/cat/cat_zz.png")
 
     def _reset_idle(self, jump=True):
-        self._idle_timer.start(10000)
+        self._idle_timer.start(60000)
         if self._idle:
             self._idle = False
             self._just_woke = True
@@ -1215,6 +1222,9 @@ class TrayIcon(QSystemTrayIcon):
         self.setToolTip("Desktop Pet")
         self._menu = QMenu()
         self._menu.setStyleSheet(_menu_style())
+        self._hide_action = QAction(tr("hide_pet"), self._menu)
+        self._hide_action.triggered.connect(self._toggle_visibility)
+        self._menu.addAction(self._hide_action)
         self._lock_action = QAction("", self._menu)
         self._lock_action.triggered.connect(self._toggle_lock)
         self._menu.addAction(self._lock_action)
@@ -1239,6 +1249,13 @@ class TrayIcon(QSystemTrayIcon):
         self._pet._toggle_touch_lock()
         self._touch_action.setText(tr("touch_unlock") if self._pet._touch_locked else tr("touch_lock"))
 
+    def _toggle_visibility(self):
+        if self._pet.isVisible():
+            self._pet.hide()
+        else:
+            self._pet.show()
+            self._pet.raise_()
+
     def _on_activated(self, reason):
         if reason != QSystemTrayIcon.ActivationReason.Context:
             # macOS에서 Trigger 외 다른 reason으로 올 수 있어서 Context 아닌 모든 클릭 처리
@@ -1259,6 +1276,7 @@ class TrayIcon(QSystemTrayIcon):
             self._lock_action.setText(tr("unlock") if self._pet._locked else tr("lock"))
             self._touch_action.setText(tr("touch_unlock") if self._pet._touch_locked else tr("touch_lock"))
             self._settings_action.setText(tr("settings"))
+            self._hide_action.setText(tr("show_pet") if not self._pet.isVisible() else tr("hide_pet"))
             self._quit_action.setText(tr("quit"))
             from PyQt6.QtGui import QCursor
             self._menu.exec(QCursor.pos())
