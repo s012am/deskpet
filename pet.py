@@ -931,6 +931,11 @@ class DesktopPet(QWidget):
 
     def _toggle_touch_lock(self):
         self._touch_locked = not self._touch_locked
+        if self._touch_locked:
+            self._set_pet_image("pets/cat/cat_cry.png")
+        else:
+            img = "pets/cat/cat_box.png" if self._locked else "pets/cat/cat_defalt.png"
+            self._set_pet_image(img)
 
     # ── 저장 / 불러오기 ─────────────────────────────────────────────
     SAVE_PATH = os.path.expanduser("~/.desktop_pet_history.json")
