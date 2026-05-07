@@ -196,6 +196,11 @@ class DraggableButton(QPushButton):
         if entry["type"] == "text":
             mime.setText(entry["data"])
         elif entry["type"] == "image":
+            from PyQt6.QtCore import QBuffer, QIODevice
+            buf = QBuffer()
+            buf.open(QIODevice.OpenModeFlag.WriteOnly)
+            entry["data"].save(buf, "PNG")
+            mime.setData("image/png", buf.data())
             mime.setImageData(entry["data"])
         elif entry["type"] == "file":
             mime.setUrls([QUrl(u) for u in entry["data"]])
@@ -791,7 +796,14 @@ class DesktopPet(QWidget):
             self._clipboard.setText(entry["data"])
             self._last_text = entry["data"]
         elif entry["type"] == "image":
-            self._clipboard.setImage(entry["data"])
+            from PyQt6.QtCore import QBuffer, QIODevice
+            md = QMimeData()
+            buf = QBuffer()
+            buf.open(QIODevice.OpenModeFlag.WriteOnly)
+            entry["data"].save(buf, "PNG")
+            md.setData("image/png", buf.data())
+            md.setImageData(entry["data"])
+            self._clipboard.setMimeData(md)
             self._last_image_key = None
         elif entry["type"] == "file":
             md = QMimeData()
