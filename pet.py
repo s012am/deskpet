@@ -184,7 +184,7 @@ class DraggableButton(QPushButton):
     def mouseMoveEvent(self, event):
         if event.buttons() == Qt.MouseButton.LeftButton:
             delta = event.position().toPoint() - self._drag_start
-            if delta.manhattanLength() > 8:
+            if delta.manhattanLength() > 15:
                 self._start_drag()
                 return
         super().mouseMoveEvent(event)
@@ -804,7 +804,8 @@ class DesktopPet(QWidget):
             md.setData("image/png", buf.data())
             md.setImageData(entry["data"])
             self._clipboard.setMimeData(md)
-            self._last_image_key = None
+            img = entry["data"]
+            self._last_image_key = (img.width(), img.height(), img.pixel(0, 0))
         elif entry["type"] == "file":
             md = QMimeData()
             md.setUrls([QUrl(u) for u in entry["data"]])
