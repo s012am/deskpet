@@ -826,7 +826,7 @@ class DesktopPet(QWidget):
                 req = urllib.request.Request(url, headers={"User-Agent": "DeskPet"})
                 with urllib.request.urlopen(req, timeout=5) as r:
                     data = json.loads(r.read())
-                latest = data["tag_name"].lstrip("v")
+                latest = data["tag_name"].removeprefix("v")
                 if latest != VERSION:
                     self._update_signal.emit(latest)
             except Exception:
@@ -977,9 +977,9 @@ class DesktopPet(QWidget):
             for entry in data.get("image", []):
                 raw = base64.b64decode(entry["data"])
                 img = QImage(entry["w"], entry["h"], QImage.Format(entry["fmt"]))
-                img.bits().setsize(len(raw))
-                for i, b in enumerate(raw):
-                    img.bits()[i] = b
+                ptr = img.bits()
+                ptr.setsize(len(raw))
+                ptr[:] = raw
                 self.history["image"].append({"type": "image", "data": img})
         except Exception:
             pass
@@ -1068,8 +1068,12 @@ class DesktopPet(QWidget):
         self._pet_h = sz
         self._pixmap_cache.clear()
         self._pet_label.setFixedSize(sz, sz)
-        img = "pets/cat/cat_box.png" if self._locked else \
-              "pets/cat/cat_z.png" if self._idle else "pets/cat/cat_defalt.png"
+        if self._idle:
+            img = self._ZZ_FRAMES[self._zz_frame]
+        elif self._locked:
+            img = "pets/cat/cat_box.png"
+        else:
+            img = "pets/cat/cat_defalt.png"
         self._set_pet_image(img)
         self._apply_layout()
 
@@ -1278,8 +1282,13 @@ class SettingsWindow(QWidget):
         if self._is_autostart():
             os.remove(self.PLIST_PATH)
         else:
-            script = os.path.abspath(resource_path("pet.py"))
-            python = sys.executable
+            if getattr(sys, "frozen", False):
+                # PyInstaller .app 빌드 — 번들 실행 파일 직접 실행
+                args = f"        <string>{sys.executable}</string>"
+            else:
+                python = sys.executable
+                script = os.path.abspath(__file__)
+                args = f"        <string>{python}</string>\n        <string>{script}</string>"
             plist = f"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -1288,8 +1297,7 @@ class SettingsWindow(QWidget):
     <string>com.deskpet</string>
     <key>ProgramArguments</key>
     <array>
-        <string>{python}</string>
-        <string>{script}</string>
+{args}
     </array>
     <key>RunAtLoad</key>
     <true/>
